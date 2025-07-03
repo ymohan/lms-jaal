@@ -1,0 +1,356 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure dark mode styles are properly applied */
+@layer base {
+  html {
+    @apply transition-colors duration-200;
+  }
+  
+  body {
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200;
+  }
+  
+  /* Ensure all text elements inherit proper colors */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-gray-900 dark:text-white;
+  }
+  
+  p {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+  
+  /* Form elements dark mode support */
+  input, textarea, select {
+    @apply bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600;
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    @apply ring-blue-500 border-blue-500;
+  }
+  
+  /* Button dark mode support */
+  button {
+    @apply transition-colors duration-200;
+  }
+  
+  /* Table dark mode support */
+  table {
+    @apply bg-white dark:bg-gray-800;
+  }
+  
+  th {
+    @apply text-gray-600 dark:text-gray-400;
+  }
+  
+  td {
+    @apply text-gray-900 dark:text-white;
+  }
+  
+  /* Card and container dark mode support */
+  .card, .container {
+    @apply bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700;
+  }
+  
+  /* Scrollbar dark mode support */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
+  }
+  
+  /* Print styles */
+  @media print {
+    body {
+      @apply bg-white text-black;
+    }
+    
+    .no-print {
+      @apply hidden;
+    }
+    
+    .print-break {
+      page-break-before: always;
+    }
+  }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-gradient {
+  animation: gradient 8s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
+}
+
+/* Gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Focus styles for accessibility */
+.focus-visible:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900;
+}
+
+/* Custom checkbox and radio styles */
+input[type="checkbox"], input[type="radio"] {
+  @apply text-blue-600 focus:ring-blue-500 focus:ring-offset-0;
+}
+
+/* Tooltip styles */
+.tooltip {
+  @apply absolute z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-200;
+}
+
+.tooltip.show {
+  @apply opacity-100;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black bg-opacity-50 z-40;
+}
+
+/* Responsive text sizes */
+@screen sm {
+  .responsive-text {
+    @apply text-base;
+  }
+}
+
+@screen lg {
+  .responsive-text {
+    @apply text-lg;
+  }
+}
+
+/* Custom utility classes */
+.text-shadow {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.text-shadow-lg {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.backdrop-blur-xs {
+  backdrop-filter: blur(2px);
+}
+
+/* Hero section styles */
+.hero-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.dark .hero-gradient {
+  background: linear-gradient(135deg, #1e3a8a 0%, #581c87 100%);
+}
+
+/* Feature card hover effects */
+.feature-card {
+  @apply transition-all duration-300 hover:scale-105 hover:shadow-xl;
+}
+
+/* Testimonial card styles */
+.testimonial-card {
+  @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+/* CTA button styles */
+.cta-button {
+  @apply bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl;
+}
+
+/* Navigation styles */
+.nav-link {
+  @apply text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 font-medium;
+}
+
+.nav-link.active {
+  @apply text-blue-600 dark:text-blue-400;
+}
+
+/* Footer styles */
+.footer-link {
+  @apply text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200;
+}
+
+/* Ensure proper contrast in dark mode */
+.dark .text-gray-600 {
+  color: theme('colors.gray.400');
+}
+
+.dark .text-gray-500 {
+  color: theme('colors.gray.400');
+}
+
+/* Fix any remaining dark mode issues */
+.dark input::placeholder,
+.dark textarea::placeholder {
+ color: #6b7280;
+}
+
+.dark select option {
+  @apply bg-gray-700 text-white;
+}
+
+/* Ensure buttons maintain proper colors */
+.dark button:not(.bg-blue-600):not(.bg-green-600):not(.bg-red-600):not(.bg-purple-600):not(.bg-yellow-600):not(.cta-button) {
+  @apply text-gray-300;
+}
+
+.dark button:hover:not(.bg-blue-600):not(.bg-green-600):not(.bg-red-600):not(.bg-purple-600):not(.bg-yellow-600):not(.cta-button) {
+  @apply text-white;
+}
+
+/* Landing page specific styles */
+.landing-section {
+  @apply py-16 lg:py-24;
+}
+
+.section-title {
+  @apply text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white text-center mb-4;
+}
+
+.section-subtitle {
+  @apply text-lg text-gray-600 dark:text-gray-400 text-center max-w-3xl mx-auto mb-12;
+}
+
+/* Stats counter animation */
+.stat-number {
+  @apply text-3xl lg:text-4xl font-bold text-blue-600 dark:text-blue-400;
+}
+
+/* Course card styles for landing */
+.course-preview-card {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1;
+}
+
+/* Methodology badge styles */
+.methodology-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.methodology-badge.tpr {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200;
+}
+
+.methodology-badge.natural-reading {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.methodology-badge.joyful-learning {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+}
+
+/* Contact form styles */
+.form-group {
+  @apply mb-6;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+}
+
+.form-input {
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors;
+}
+
+.form-textarea {
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors resize-none;
+}
+
+/* Mobile menu styles */
+.mobile-menu {
+  @apply fixed inset-0 z-50 bg-white dark:bg-gray-900 transform transition-transform duration-300 ease-in-out;
+}
+
+.mobile-menu.open {
+  @apply translate-x-0;
+}
+
+.mobile-menu.closed {
+  @apply translate-x-full;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading states */
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+/* Success/Error states */
+.success-message {
+  @apply bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-lg;
+}
+
+.error-message {
+  @apply bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg;
+}

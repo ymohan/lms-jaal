@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          String         @default("student")
+  isActive      Boolean        @default(true)
+  lastLogin     DateTime?
+  profile       Json?
+  preferences   Json?
+  enrollments   Enrollment[]
+  courses       Course[]
+  completions   Completion[]
+  certificates  Certificate[]
+  securityLogs  SecurityLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Course {
+  id                String         @id @default(uuid())
+  title             String
+  description       String
+  language          String
+  teacherId         String
+  teacherName       String
+  level             String
+  lessons           Json
+  thumbnail         String?
+  duration          Int            @default(0)
+  methodology       String[]
+  isPublished       Boolean        @default(false)
+  tags              String[]
+  prerequisites     String[]
+  learningObjectives String[]
+  enrollments       Enrollment[]
+  completions       Completion[]
+  certificates      Certificate[]
+  teacher           User           @relation(fields: [teacherId], references: [id])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model Enrollment {
+  id              String       @id @default(uuid())
+  userId          String
+  courseId        String
+  enrolledAt      DateTime     @default(now())
+  status          String       @default("active")
+  completionDate  DateTime?
+  certificateIssued Boolean    @default(false)
+  certificateId   String?
+  user            User         @relation(fields: [userId], references: [id])
+  course          Course       @relation(fields: [courseId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model Completion {
+  id            String       @id @default(uuid())
+  userId        String
+  courseId      String
+  lessonId      String?
+  completed     Boolean      @default(false)
+  completedAt   DateTime?
+  progress      Int          @default(0)
+  timeSpent     Int          @default(0)
+  score         Int?
+  attempts      Int          @default(0)
+  lastAccessed  DateTime     @default(now())
+  user          User         @relation(fields: [userId], references: [id])
+  course        Course       @relation(fields: [courseId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([userId, courseId])
+}
+
+model Certificate {
+  id              String       @id @default(uuid())
+  userId          String
+  courseId        String
+  courseName      String
+  studentName     String
+  issuedDate      DateTime     @default(now())
+  verificationCode String      @unique
+  status          String       @default("issued")
+  grade           String?
+  score           Int?
+  user            User         @relation(fields: [userId], references: [id])
+  course          Course       @relation(fields: [courseId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model SecurityLog {
+  id          String       @id @default(uuid())
+  userId      String?
+  action      String
+  resource    String
+  success     Boolean
+  ipAddress   String?
+  userAgent   String?
+  details     Json?
+  user        User?        @relation(fields: [userId], references: [id])
+  createdAt   DateTime     @default(now())
+}

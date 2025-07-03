@@ -1,34 +1,33 @@
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-// Create axios instance
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// Create axios instance with default config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_BASE_URL}/api`,
+  timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
-// Add token to requests if available
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Add auth token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-// Handle token expiration
+// Handle response errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login
+    if (error.response?.status === 401) {
+      // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/';
@@ -38,186 +37,224 @@ api.interceptors.response.use(
 );
 
 // Socket.IO connection
-export const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
-  auth: {
-    token: localStorage.getItem('token')
-  }
+export const socket = io(API_BASE_URL, {
+  autoConnect: false,
+  transports: ['websocket', 'polling'],
 });
 
 // Auth API
 export const authAPI = {
   login: async (email: string, password: string, role: string) => {
-    const response = await api.post('/users/login', { email, password, role });
-    return response.data;
+    try {
+      const response = await api.post('/users/login', { email, password, role });
+      return response.data;
+    } catch (error) {
+      console.error('Login API error:', error);
+      throw error;
+    }
   },
-  register: async (name: string, email: string, password: string, role: string) => {
-    const response = await api.post('/users/register', { name, email, password, role });
-    return response.data;
+
+  register: async (userData: any) => {
+    try {
+      const response = await api.post('/users/register', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Register API error:', error);
+      throw error;
+    }
   },
+
   getCurrentUser: async () => {
-    const response = await api.get('/users/me');
-    return response.data;
+    try {
+      const response = await api.get('/users/me');
+      return response.data;
+    } catch (error) {
+      console.error('Get current user API error:', error);
+      throw error;
+    }
   },
-  updateProfile: async (data: any) => {
-    const response = await api.put('/users/profile', data);
-    return response.data;
+
+  updateProfile: async (updates: any) => {
+    try {
+      const response = await api.put('/users/profile', updates);
+      return response.data;
+    } catch (error) {
+      console.error('Update profile API error:', error);
+      throw error;
+    }
   },
-  changePassword: async (currentPassword: string, newPassword: string) => {
-    const response = await api.put('/users/password', { currentPassword, newPassword });
-    return response.data;
-  }
 };
 
 // Course API
 export const courseAPI = {
-  getAllCourses: async (params?: any) => {
-    const response = await api.get('/courses', { params });
-    return response.data;
+  getCourses: async () => {
+    try {
+      const response = await api.get('/courses');
+      return response.data;
+    } catch (error) {
+      console.error('Get courses API error:', error);
+      throw error;
+    }
   },
-  getCourseById: async (id: string) => {
-    const response = await api.get(`/courses/${id}`);
-    return response.data;
+
+  getCourse: async (id: string) => {
+    try {
+      const response = await api.get(`/courses/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get course API error:', error);
+      throw error;
+    }
   },
+
   createCourse: async (courseData: any) => {
-    const response = await api.post('/courses', courseData);
-    return response.data;
+    try {
+      const response = await api.post('/courses', courseData);
+      return response.data;
+    } catch (error) {
+      console.error('Create course API error:', error);
+      throw error;
+    }
   },
+
   updateCourse: async (id: string, courseData: any) => {
-    const response = await api.put(`/courses/${id}`, courseData);
-    return response.data;
+    try {
+      const response = await api.put(`/courses/${id}`, courseData);
+      return response.data;
+    } catch (error) {
+      console.error('Update course API error:', error);
+      throw error;
+    }
   },
+
   deleteCourse: async (id: string) => {
-    const response = await api.delete(`/courses/${id}`);
-    return response.data;
+    try {
+      const response = await api.delete(`/courses/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete course API error:', error);
+      throw error;
+    }
   },
-  getCoursesByTeacher: async (teacherId?: string) => {
-    const url = teacherId ? `/courses/teacher/${teacherId}` : '/courses/teacher';
-    const response = await api.get(url);
-    return response.data;
-  },
-  getEnrolledCourses: async (studentId?: string) => {
-    const url = studentId ? `/courses/student/${studentId}` : '/courses/student';
-    const response = await api.get(url);
-    return response.data;
-  },
-  addLesson: async (courseId: string, lessonData: any) => {
-    const response = await api.post(`/courses/${courseId}/lessons`, lessonData);
-    return response.data;
-  },
-  updateLesson: async (courseId: string, lessonId: string, lessonData: any) => {
-    const response = await api.put(`/courses/${courseId}/lessons/${lessonId}`, lessonData);
-    return response.data;
-  },
-  deleteLesson: async (courseId: string, lessonId: string) => {
-    const response = await api.delete(`/courses/${courseId}/lessons/${lessonId}`);
-    return response.data;
-  }
 };
 
 // Quiz API
 export const quizAPI = {
-  getQuizById: async (id: string) => {
-    const response = await api.get(`/quizzes/${id}`);
-    return response.data;
+  getQuizzes: async () => {
+    try {
+      const response = await api.get('/quizzes');
+      return response.data;
+    } catch (error) {
+      console.error('Get quizzes API error:', error);
+      throw error;
+    }
   },
-  createQuiz: async (quizData: any) => {
-    const response = await api.post('/quizzes', quizData);
-    return response.data;
-  },
-  updateQuiz: async (id: string, quizData: any) => {
-    const response = await api.put(`/quizzes/${id}`, quizData);
-    return response.data;
-  },
-  deleteQuiz: async (id: string) => {
-    const response = await api.delete(`/quizzes/${id}`);
-    return response.data;
-  },
-  submitQuiz: async (id: string, answers: any) => {
-    const response = await api.post(`/quizzes/${id}/submit`, { answers });
-    return response.data;
-  }
-};
 
-// Completion API
-export const completionAPI = {
-  getUserCompletions: async (userId?: string) => {
-    const url = userId ? `/completions/${userId}` : '/completions';
-    const response = await api.get(url);
-    return response.data;
+  getQuiz: async (id: string) => {
+    try {
+      const response = await api.get(`/quizzes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get quiz API error:', error);
+      throw error;
+    }
   },
-  getCourseCompletion: async (courseId: string, userId?: string) => {
-    const url = userId 
-      ? `/completions/course/${courseId}/${userId}` 
-      : `/completions/course/${courseId}`;
-    const response = await api.get(url);
-    return response.data;
+
+  createQuiz: async (quizData: any) => {
+    try {
+      const response = await api.post('/quizzes', quizData);
+      return response.data;
+    } catch (error) {
+      console.error('Create quiz API error:', error);
+      throw error;
+    }
   },
-  updateCompletion: async (data: any) => {
-    const response = await api.post('/completions', data);
-    return response.data;
+
+  updateQuiz: async (id: string, quizData: any) => {
+    try {
+      const response = await api.put(`/quizzes/${id}`, quizData);
+      return response.data;
+    } catch (error) {
+      console.error('Update quiz API error:', error);
+      throw error;
+    }
   },
-  getCourseCompletionStats: async (courseId: string) => {
-    const response = await api.get(`/completions/stats/${courseId}`);
-    return response.data;
-  }
+
+  deleteQuiz: async (id: string) => {
+    try {
+      const response = await api.delete(`/quizzes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete quiz API error:', error);
+      throw error;
+    }
+  },
+
+  submitQuiz: async (quizId: string, answers: any) => {
+    try {
+      const response = await api.post(`/quizzes/${quizId}/submit`, { answers });
+      return response.data;
+    } catch (error) {
+      console.error('Submit quiz API error:', error);
+      throw error;
+    }
+  },
 };
 
 // Enrollment API
 export const enrollmentAPI = {
-  enrollInCourse: async (courseId: string) => {
-    const response = await api.post('/enrollments', { courseId });
-    return response.data;
+  getEnrollments: async () => {
+    try {
+      const response = await api.get('/enrollments');
+      return response.data;
+    } catch (error) {
+      console.error('Get enrollments API error:', error);
+      throw error;
+    }
   },
-  unenrollFromCourse: async (courseId: string) => {
-    const response = await api.delete(`/enrollments/${courseId}`);
-    return response.data;
+
+  enroll: async (courseId: string) => {
+    try {
+      const response = await api.post('/enrollments', { courseId });
+      return response.data;
+    } catch (error) {
+      console.error('Enroll API error:', error);
+      throw error;
+    }
   },
-  getUserEnrollments: async (userId?: string) => {
-    const url = userId ? `/enrollments/${userId}` : '/enrollments';
-    const response = await api.get(url);
-    return response.data;
+
+  unenroll: async (courseId: string) => {
+    try {
+      const response = await api.delete(`/enrollments/${courseId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Unenroll API error:', error);
+      throw error;
+    }
   },
-  getCourseEnrollments: async (courseId: string) => {
-    const response = await api.get(`/enrollments/course/${courseId}`);
-    return response.data;
-  },
-  issueCertificate: async (data: any) => {
-    const response = await api.post('/enrollments/certificate', data);
-    return response.data;
-  },
-  verifyCertificate: async (verificationCode: string) => {
-    const response = await api.get(`/enrollments/certificate/verify/${verificationCode}`);
-    return response.data;
-  },
-  getUserCertificates: async (userId?: string) => {
-    const url = userId ? `/enrollments/certificate/${userId}` : '/enrollments/certificate';
-    const response = await api.get(url);
-    return response.data;
-  }
 };
 
-// User API
-export const userAPI = {
-  getAllUsers: async () => {
-    const response = await api.get('/users/all');
-    return response.data;
+// Completion API
+export const completionAPI = {
+  getCompletions: async () => {
+    try {
+      const response = await api.get('/completions');
+      return response.data;
+    } catch (error) {
+      console.error('Get completions API error:', error);
+      throw error;
+    }
   },
-  getUserById: async (id: string) => {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
+
+  markComplete: async (courseId: string, lessonId: string) => {
+    try {
+      const response = await api.post('/completions', { courseId, lessonId });
+      return response.data;
+    } catch (error) {
+      console.error('Mark complete API error:', error);
+      throw error;
+    }
   },
-  updateUser: async (id: string, userData: any) => {
-    const response = await api.put(`/users/${id}`, userData);
-    return response.data;
-  },
-  deleteUser: async (id: string) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
-  getSecurityLogs: async (params?: any) => {
-    const response = await api.get('/users/logs', { params });
-    return response.data;
-  }
 };
 
 export default api;

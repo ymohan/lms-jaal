@@ -9,14 +9,14 @@ import {
   verifyCertificate,
   getUserCertificates
 } from '../controllers/enrollmentController.js';
-import { protect, authorize, hasPermission } from '../middleware/auth.js';
+import { authenticateToken, requireRole, checkPermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Enroll in a course
 router.post(
   '/',
-  protect,
+  authenticateToken,
   [
     body('courseId').notEmpty().withMessage('Course ID is required')
   ],
@@ -24,19 +24,19 @@ router.post(
 );
 
 // Unenroll from a course
-router.delete('/:courseId', protect, unenrollFromCourse);
+router.delete('/:courseId', authenticateToken, unenrollFromCourse);
 
 // Get user enrollments
-router.get('/:userId?', protect, getUserEnrollments);
+router.get('/:userId?', authenticateToken, getUserEnrollments);
 
 // Get course enrollments (for teachers/admins)
-router.get('/course/:courseId', protect, authorize('admin', 'teacher'), getCourseEnrollments);
+router.get('/course/:courseId', authenticateToken, requireRole('admin', 'teacher'), getCourseEnrollments);
 
 // Issue certificate
 router.post(
   '/certificate',
-  protect,
-  authorize('admin', 'teacher'),
+  authenticateToken,
+  requireRole('admin', 'teacher'),
   [
     body('userId').notEmpty().withMessage('User ID is required'),
     body('courseId').notEmpty().withMessage('Course ID is required')
@@ -48,6 +48,6 @@ router.post(
 router.get('/certificate/verify/:verificationCode', verifyCertificate);
 
 // Get user certificates
-router.get('/certificate/:userId?', protect, getUserCertificates);
+router.get('/certificate/:userId?', authenticateToken, getUserCertificates);
 
 export default router;

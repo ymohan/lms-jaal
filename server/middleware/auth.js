@@ -20,10 +20,10 @@ export const authenticateToken = async (req, res, next) => {
 
   try {
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
 
     // Get user from token
-    req.user = await User.findById(decoded.id).select('-password');
+    req.user = await User.findById(decoded.id);
     
     if (!req.user) {
       return res.status(401).json({
@@ -50,27 +50,6 @@ export const requireRole = (...roles) => {
         message: `Role ${req.user.role} is not authorized to access this route`
       });
     }
-    next();
-  };
-};
-
-// Check permission
-export const checkPermission = (permission) => {
-  return (req, res, next) => {
-    // Admin has all permissions
-    if (req.user.role === 'admin') {
-      return next();
-    }
-    
-    // Check if user has the required permission
-    const userPermissions = req.user.permissions || [];
-    if (!userPermissions.includes(permission) && !userPermissions.includes('*:*')) {
-      return res.status(403).json({
-        success: false,
-        message: `Permission denied: ${permission}`
-      });
-    }
-    
     next();
   };
 };

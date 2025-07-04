@@ -1,142 +1,102 @@
-import mongoose from 'mongoose';
+import pool from '../db/postgres.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    maxlength: [50, 'Name cannot exceed 50 characters']
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false
-  },
-  role: {
-    type: String,
-    enum: ['student', 'teacher', 'admin'],
-    default: 'student'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastLogin: {
-    type: Date
-  },
-  profile: {
-    avatar: String,
-    bio: String,
-    phone: String,
-    dateOfBirth: Date,
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      zipCode: String,
-      country: String
+class User {
+  // Find user by ID
+  static async findById(id) {
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
     }
-  },
-  preferences: {
-    language: {
-      type: String,
-      default: 'en'
-    },
-    theme: {
-      type: String,
-      enum: ['light', 'dark'],
-      default: 'light'
-    },
-    notifications: {
-      email: {
-        type: Boolean,
-        default: true
-      },
-      push: {
-        type: Boolean,
-        default: true
+  }
+  
+  // Find user by email
+  static async findByEmail(email) {
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Create a new user
+  static async create(userData) {
+    const { name, email, password, role = 'student' } = userData;
+    
+    try {
+      // Check if user exists
+      const existingUser = await this.findByEmail(email);
+      if (existingUser) {
+        throw new Error('User already exists');
       }
+      
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      
+      // Insert user
+      const result = await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *',
+        [name, email, hashedPassword, role]
+      );
+      
+      return result.rows[0];
+    } catch (error) {
+      throw error;
     }
-  },
-  enrollments: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Course'
-  }],
-  completedCourses: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Course'
-  }],
-  certificates: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Certificate'
-  }]
-}, {
-  timestamps: true
-});
-
-// Index for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ isActive: 1 });
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
   }
-});
-
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw new Error('Password comparison failed');
-  }
-};
-
-// Generate JWT token
-userSchema.methods.generateAuthToken = function() {
-  const payload = {
-    id: this._id,
-    email: this.email,
-    role: this.role
-  };
   
-  return jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret', {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
-  });
-};
-
-// Transform output (remove sensitive data)
-userSchema.methods.toJSON = function() {
-  const userObject = this.toObject();
-  delete userObject.password;
-  return userObject;
-};
-
-// Static method to find user by email with password
-userSchema.statics.findByEmailWithPassword = function(email) {
-  return this.findOne({ email }).select('+password');
-};
-
-const User = mongoose.model('User', userSchema);
+  // Update user
+  static async update(id, updates) {
+    try {
+      const fields = Object.keys(updates).filter(key => updates[key] !== undefined);
+      
+      if (fields.length === 0) return null;
+      
+      const setString = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
+      const values = fields.map(field => updates[field]);
+      
+      const query = `
+        UPDATE users 
+        SET ${setString}, updated_at = NOW() 
+        WHERE id = $${fields.length + 1} 
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, [...values, id]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Delete user
+  static async delete(id) {
+    try {
+      await pool.query('DELETE FROM users WHERE id = $1', [id]);
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  // Compare password
+  static async comparePassword(password, hashedPassword) {
+    return await bcrypt.compare(password, hashedPassword);
+  }
+  
+  // Generate JWT token
+  static generateToken(user) {
+    return jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    );
+  }
+}
 
 export default User;

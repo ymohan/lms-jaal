@@ -2,19 +2,24 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import connectDB from './config/db.js';
+import path from 'path';
+import { fileURLToPath } from 'url'; 
+import pool from './db/postgres.js';
 
 // Route imports
 import userRoutes from './routes/userRoutes.js';
-import postRoutes from './routes/postRoutes.js';
 
 // Load env vars
 dotenv.config();
 
-// Connect to database
-connectDB();
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Database connection error:', err);
+  } else {
+    console.log('✅ Database connected:', res.rows[0].now);
+  }
+});
 
 const app = express();
 
@@ -29,7 +34,6 @@ if (process.env.NODE_ENV === 'development') {
 
 // Define routes
 app.use('/api/users', userRoutes);
-app.use('/api/posts', postRoutes);
 
 // Simple health check route
 app.get('/api/health', (req, res) => {
@@ -38,15 +42,14 @@ app.get('/api/health', (req, res) => {
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   
   // Set static folder
-  app.use(express.static(join(__dirname, '../client/dist')));
+  app.use(express.static(path.join(__dirname, '../client/dist')));
   
   // Any route that is not api will be redirected to index.html
   app.get('*', (req, res) => {
-    res.sendFile(join(__dirname, '../client/dist/index.html'));
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
 

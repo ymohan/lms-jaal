@@ -9,7 +9,7 @@ export class SecurityUtils {
     return DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
       ALLOWED_ATTR: ['class', 'id'],
-	  KEEP_CONTENT: false
+      KEEP_CONTENT: false
     });
   }
 
@@ -203,6 +203,27 @@ export class SecurityUtils {
       return parsed.toString();
     } catch (e) {
       return '';
+    }
+  }
+  
+  // Detect suspicious activity
+  static detectSuspiciousActivity(activity: any): boolean {
+    // Implement rules to detect suspicious activity
+    // For example, multiple failed login attempts, unusual access patterns, etc.
+    return false;
+  }
+  
+  // Validate JWT token
+  static validateJwtToken(token: string): boolean {
+    try {
+      // Simple validation - check if token has three parts
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+      
+      // In a real implementation, you would verify the signature
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

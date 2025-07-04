@@ -11,6 +11,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable cookies for CORS requests if needed
 });
 
 // Add auth token to requests
@@ -20,18 +21,32 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
 // Handle response errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Network errors
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(new Error('Network error. Please check your internet connection.'));
+    }
+    
+    // Handle specific status codes
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/';
     }
+    
+    // Return the error with a more user-friendly message
+    const errorMessage = error.response?.data?.message || 'An unexpected error occurred';
+    error.userMessage = errorMessage;
+    
     return Promise.reject(error);
   }
 );
@@ -40,6 +55,22 @@ api.interceptors.response.use(
 export const socket = io(API_BASE_URL, {
   autoConnect: false,
   transports: ['websocket', 'polling'],
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 20000,
+});
+
+// Socket connection event handlers
+socket.on('connect', () => {
+  console.log('Socket connected');
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Socket connection error:', error);
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Socket disconnected:', reason);
 });
 
 // Auth API
@@ -83,13 +114,43 @@ export const authAPI = {
       throw error;
     }
   },
+  
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    try {
+      const response = await api.put('/users/password', { currentPassword, newPassword });
+      return response.data;
+    } catch (error) {
+      console.error('Change password API error:', error);
+      throw error;
+    }
+  },
+  
+  requestPasswordReset: async (email: string) => {
+    try {
+      const response = await api.post('/users/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      console.error('Request password reset API error:', error);
+      throw error;
+    }
+  },
+  
+  resetPassword: async (token: string, newPassword: string) => {
+    try {
+      const response = await api.post('/users/reset-password', { token, newPassword });
+      return response.data;
+    } catch (error) {
+      console.error('Reset password API error:', error);
+      throw error;
+    }
+  },
 };
 
 // Course API
 export const courseAPI = {
-  getCourses: async () => {
+  getAllCourses: async (filters = {}) => {
     try {
-      const response = await api.get('/courses');
+      const response = await api.get('/courses', { params: filters });
       return response.data;
     } catch (error) {
       console.error('Get courses API error:', error);
@@ -232,6 +293,26 @@ export const enrollmentAPI = {
       throw error;
     }
   },
+  
+  getCertificates: async () => {
+    try {
+      const response = await api.get('/enrollments/certificate');
+      return response.data;
+    } catch (error) {
+      console.error('Get certificates API error:', error);
+      throw error;
+    }
+  },
+  
+  verifyCertificate: async (code: string) => {
+    try {
+      const response = await api.get(`/enrollments/certificate/verify/${code}`);
+      return response.data;
+    } catch (error) {
+      console.error('Verify certificate API error:', error);
+      throw error;
+    }
+  },
 };
 
 // Completion API
@@ -246,12 +327,32 @@ export const completionAPI = {
     }
   },
 
-  markComplete: async (courseId: string, lessonId: string) => {
+  updateCompletion: async (data: { courseId: string, lessonId?: string, progress?: number, score?: number }) => {
     try {
-      const response = await api.post('/completions', { courseId, lessonId });
+      const response = await api.post('/completions', data);
       return response.data;
     } catch (error) {
-      console.error('Mark complete API error:', error);
+      console.error('Update completion API error:', error);
+      throw error;
+    }
+  },
+  
+  getCourseCompletion: async (courseId: string) => {
+    try {
+      const response = await api.get(`/completions/course/${courseId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get course completion API error:', error);
+      throw error;
+    }
+  },
+  
+  getCourseStats: async (courseId: string) => {
+    try {
+      const response = await api.get(`/completions/stats/${courseId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get course stats API error:', error);
       throw error;
     }
   },

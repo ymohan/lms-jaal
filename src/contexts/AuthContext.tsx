@@ -11,6 +11,8 @@ interface AuthContextType {
   isLoading: boolean;
   csrfToken: string;
   updateUser: (updates: Partial<User>) => void;
+  error: string | null;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [csrfToken, setCsrfToken] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Generate CSRF token
@@ -36,13 +39,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Verify token with backend
         authAPI.getCurrentUser()
           .then(response => {
-            setUser(response.user);
-            SecurityUtils.logSecurityEvent({
-              userId: response.user._id,
-              action: 'session_restored',
-              resource: 'auth',
-              success: true,
-            });
+            if (response.success) {
+              setUser(response.user);
+              SecurityUtils.logSecurityEvent({
+                userId: response.user.id,
+                action: 'session_restored',
+                resource: 'auth',
+                success: true,
+              });
+            } else {
+              throw new Error('Failed to verify user session');
+            }
           })
           .catch(error => {
             console.error('Error verifying token:', error);
@@ -53,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               action: 'invalid_session',
               resource: 'auth',
               success: false,
+              details: { error: error.message },
             });
           })
           .finally(() => {
@@ -70,30 +78,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const clearError = () => {
+    setError(null);
+  };
+
   const login = async (email: string, password: string, role: string): Promise<boolean> => {
-    // Rate limiting check
-    if (!SecurityUtils.checkRateLimit(email, 'login')) {
-      SecurityUtils.logSecurityEvent({
-        action: 'login_rate_limited',
-        resource: 'auth',
-        success: false,
-        details: { email, role },
-      });
-      return false;
-    }
-
-    // Validate input
-    if (!SecurityUtils.validateEmail(email)) {
-      SecurityUtils.logSecurityEvent({
-        action: 'login_invalid_email',
-        resource: 'auth',
-        success: false,
-        details: { email },
-      });
-      return false;
-    }
-
     try {
+      setError(null);
+      
+      // Rate limiting check
+      if (!SecurityUtils.checkRateLimit(email, 'login')) {
+        setError('Too many login attempts. Please try again later.');
+        SecurityUtils.logSecurityEvent({
+          action: 'login_rate_limited',
+          resource: 'auth',
+          success: false,
+          details: { email, role },
+        });
+        return false;
+      }
+
+      // Validate input
+      if (!SecurityUtils.validateEmail(email)) {
+        setError('Invalid email format');
+        SecurityUtils.logSecurityEvent({
+          action: 'login_invalid_email',
+          resource: 'auth',
+          success: false,
+          details: { email },
+        });
+        return false;
+      }
+
+      // Make API call
       const response = await authAPI.login(email, password, role);
       
       if (response.success) {
@@ -110,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(user);
         
         SecurityUtils.logSecurityEvent({
-          userId: user._id,
+          userId: user.id,
           action: 'login_success',
           resource: 'auth',
           success: true,
@@ -118,11 +135,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         return true;
+      } else {
+        setError(response.message || 'Login failed. Please check your credentials.');
+        return false;
       }
-      
-      return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
+      
+      // Set user-friendly error message
+      if (error.response) {
+        // Server responded with an error status
+        setError(error.response.data?.message || 'Login failed. Server error.');
+      } else if (error.request) {
+        // Request was made but no response received
+        setError('Unable to connect to the server. Please check your internet connection.');
+      } else {
+        // Something else happened while setting up the request
+        setError('Login failed. Please try again.');
+      }
       
       SecurityUtils.logSecurityEvent({
         action: 'login_failed',
@@ -159,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (updates: Partial<User>) => {
     if (user) {
       try {
+        setError(null);
         const response = await authAPI.updateProfile(updates);
         
         if (response.success) {
@@ -175,11 +206,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
           
           return true;
+        } else {
+          setError(response.message || 'Failed to update profile');
+          return false;
         }
-        
-        return false;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Update user error:', error);
+        setError(error.response?.data?.message || 'Failed to update profile. Please try again.');
         return false;
       }
     }
@@ -194,7 +227,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout, 
       isLoading, 
       csrfToken,
-      updateUser 
+      updateUser,
+      error,
+      clearError
     }}>
       {children}
     </AuthContext.Provider>

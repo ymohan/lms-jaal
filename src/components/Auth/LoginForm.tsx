@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, GraduationCap, Shield, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -15,51 +15,71 @@ export function LoginForm({ onSuccess, onBack }: LoginFormProps) {
   const [role, setRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  const { login, csrfToken } = useAuth();
+  const { login, csrfToken, error, clearError } = useAuth();
   const { t } = useLanguage();
+
+  // Clear auth context error when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
+
+  // Reset form error when inputs change
+  useEffect(() => {
+    if (formError) {
+      setFormError('');
+    }
+  }, [email, password, role]);
+
+  // Show auth context error in form
+  useEffect(() => {
+    if (error) {
+      setFormError(error);
+    }
+  }, [error]);
 
   const handleSubmit = async () => {
     // Check if user is blocked due to too many attempts
     if (isBlocked) {
-      setError('Too many failed attempts. Please try again later.');
+      setFormError('Too many failed attempts. Please try again later.');
       return;
     }
 
     // Validate input
     if (!email || !password || !role) {
-      setError('Please fill in all fields');
+      setFormError('Please fill in all fields');
       return;
     }
 
     if (!SecurityUtils.validateEmail(email)) {
-      setError('Please enter a valid email address');
+      setFormError('Please enter a valid email address');
       return;
     }
 
     // Check rate limiting
     if (!SecurityUtils.checkRateLimit(email, 'login')) {
-      setError('Too many login attempts. Please try again in 15 minutes.');
+      setFormError('Too many login attempts. Please try again in 15 minutes.');
       setIsBlocked(true);
       return;
     }
 
     setIsLoading(true);
-    setError('');
+    setFormError('');
 
     try {
       const success = await login(email, password, role);
       if (!success) {
         setAttempts(prev => prev + 1);
-        setError('Invalid credentials or role mismatch');
         
         // Block after 5 failed attempts
         if (attempts >= 4) {
           setIsBlocked(true);
-          setError('Account temporarily locked due to multiple failed attempts');
+          setFormError('Account temporarily locked due to multiple failed attempts');
         }
       } else {
         setAttempts(0);
@@ -69,7 +89,7 @@ export function LoginForm({ onSuccess, onBack }: LoginFormProps) {
         }
       }
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setFormError('Login failed. Please try again.');
       SecurityUtils.logSecurityEvent({
         action: 'login_error',
         resource: 'auth',
@@ -124,11 +144,11 @@ export function LoginForm({ onSuccess, onBack }: LoginFormProps) {
         
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 sm:p-8 space-y-6">
           {/* Error Messages */}
-          {error && (
+          {formError && (
             <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-4">
               <div className="flex items-center">
                 <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mr-2" />
-                <div className="text-sm text-red-600 dark:text-red-300">{error}</div>
+                <div className="text-sm text-red-600 dark:text-red-300">{formError}</div>
               </div>
             </div>
           )}

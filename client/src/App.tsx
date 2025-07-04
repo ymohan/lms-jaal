@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from "@/components/ui/toaster"
 import { LoginForm } from './components/auth/LoginForm'
-import { RegisterForm } from './components/auth/RegisterForm'
+import { RegisterForm } from './components/auth/RegisterForm' 
 import { AuthProvider } from './contexts/AuthContext'
+import { Home } from './components/Home'
+import { Dashboard } from './components/Dashboard'
 
 function App() {
   return (
@@ -164,6 +166,22 @@ function Dashboard() {
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+function Login() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+      <LoginForm />
+    </div>
+  )
+}
+
+function Register() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+      <RegisterForm />
     </div>
   )
 }
